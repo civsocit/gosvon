@@ -3,6 +3,26 @@ var timers = {};
 const expireTime = 3600 * 1000; // one hour to expire botlist cache
 const YTBcolor = '255,50,50';
 
+let videoTitle;
+function ClearComments() {
+  if (videoTitle) {
+    if (videoTitle !== document.querySelectorAll('h1')[0].children[0].innerText) {
+      videoTitle = document.querySelectorAll('h1')[0].children[0].innerText;
+      document.querySelectorAll('a.comment-icon-container').forEach(node => {
+        node.parentElement.style = '';
+        node.removeAttribute('data-ytb-examined');
+      });
+      document.querySelectorAll('a.ytd-comment-renderer#author-text').forEach(node => {
+        node.parentElement.style = '';
+        node.removeAttribute('data-ytb-examined');
+      });
+    }
+  } else {
+    videoTitle = document.querySelectorAll('h1')[0].children[0].innerText
+  }
+}
+setInterval(() => ClearComments(), 1000);
+
 // Start!
 getList(function(items) {
   arrayYTB = items;
@@ -16,13 +36,19 @@ function markNode(node) {
   node.parentElement.style.paddingLeft = "3px"
 }
 
+function DemarkNode(node) {
+  node.parentElement.style = '';
+}
+
 function foundAuthor(node) {
   // href is like /channel/USER_ID
   userId = node.getAttribute("href").match('.+channel/(.+)')[1];
   foundId = arrayYTB.indexOf(userId);
   if (foundId > -1) {
-    console.log("Bot found " + userId);
+    //console.log("Bot found " + userId);
     markNode(node);
+  } else {
+    DemarkNode(node);
   }
 }
 
@@ -33,10 +59,13 @@ function findAndMark(key) {
     btargetsFound = true;
     targetNodes.forEach(function(node) {
       var examined = node.dataset.ytbExamined; // Set flag to the node for single check
+      foundAuthor(node);
+      /*
       if(!examined) {
         node.dataset.ytbExamined = true;
         foundAuthor(node);
       }
+      */
     })
   } else {
     btargetsFound = false;
@@ -59,7 +88,7 @@ function getList(callback) {
     if(data && data.bots && data.updated && data.updated > now.getTime() - expireTime) { // botlist is stored and fresh
       callback(data.bots)
     } else {
-      console.log('Requesting list')
+      //console.log('Requesting list')
       fetchList(callback)
     }
   })
@@ -69,7 +98,7 @@ function getList(callback) {
 function fetchList(callback) {
   chrome.runtime.sendMessage({type: 'get_youtube_bot_list'}, function(text, err) {
     if(err) {
-      console.log("Youtube bots list load error ", err)
+      //console.log("Youtube bots list load error ", err)
     } else {
       var items = parseResponse(text)
       storeData(items)
